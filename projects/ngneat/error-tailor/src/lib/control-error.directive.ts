@@ -1,10 +1,13 @@
 import {
+  afterRender,
+  ChangeDetectorRef,
   ComponentRef,
   Directive,
   DoCheck,
   ElementRef,
   EmbeddedViewRef,
   Inject,
+  Injector,
   Input,
   isDevMode,
   OnDestroy,
@@ -69,6 +72,8 @@ export class ControlErrorsDirective implements OnInit, OnDestroy, DoCheck {
 
   constructor(
     private vcr: ViewContainerRef,
+    private changeDetectorRef: ChangeDetectorRef,
+    private injector: Injector,
     elementRef: ElementRef,
     @Inject(ErrorTailorConfigProvider) private config: ErrorTailorConfig,
     @Inject(FORM_ERRORS) private globalErrors,
@@ -126,6 +131,7 @@ export class ControlErrorsDirective implements OnInit, OnDestroy, DoCheck {
     if (this.mergedConfig.controlErrorsOn.touched) {
       // every time the touched property changes, skipping the first emission since it's the initial state
       changesOnTouched$ = this.touchedChanges$.asObservable().pipe(distinctUntilChanged(), skip(1));
+      afterRender(() => this.touchedChanges$.next(this.control.touched), { injector: this.injector });
     }
 
     if (this.isInput && this.mergedConfig.controlErrorsOn.blur) {
@@ -171,13 +177,16 @@ export class ControlErrorsDirective implements OnInit, OnDestroy, DoCheck {
       } else {
         this.hideError();
       }
+
+      // setTimeout(() => this.changeDetectorRef.detectChanges(), 10); // Doesn't throw error
+      this.changeDetectorRef.detectChanges(); // Throws error
     });
   }
 
   ngDoCheck(): void {
-    if (this.mergedConfig.controlErrorsOn.touched) {
-      this.touchedChanges$.next(this.control.touched);
-    }
+    // if (this.mergedConfig.controlErrorsOn.touched) {
+    //   this.touchedChanges$.next(this.control.touched);
+    // }
   }
 
   private setError(text: string, error?: ValidationErrors) {
